@@ -1,16 +1,24 @@
 from KNN import knn
+from feed_forward import feed_forward
+from CNN import cnn
+from ecnn import ensemble_cnn
+
 
 def knn_menu():
     knn.open_menu()
 
+
 def ff_menu():
-    return
+    feed_forward.open_menu()
+
 
 def cnn_menu():
-    return
+    cnn.open_menu()
+
 
 def ecnn_menu():
-    return
+    ensemble_cnn.open_menu()
+
 
 menu_switcher = {
     'knn': knn_menu,

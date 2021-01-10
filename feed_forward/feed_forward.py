@@ -3,15 +3,15 @@ import torch
 import torch.nn.functional as F
 from mnist import MNIST
 
-#input 1x784 (28x28) image
-INPUT_SIZE = 784
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 
 def calc_accuracy(model, x_test, y_test):
     test_predictions = model(x_test)
     num_correct = torch.sum(test_predictions.argmax(dim=1) == y_test)
     accuracy = (float(num_correct) / len(y_test)) * 100
     print("The model accuracy over the test set is " + str(accuracy) + "%")
+
 
 class DigitClassifierOneHidden(torch.nn.Module):
     def __init__(self):
@@ -26,7 +26,7 @@ class DigitClassifierOneHidden(torch.nn.Module):
         return x
 
 
-if __name__ == '__main__':
+def open_menu():
     #load the train and test data
     mnist = MNIST('.\\MNIST dataset\\')
     x_train, y_train = mnist.load_training()
