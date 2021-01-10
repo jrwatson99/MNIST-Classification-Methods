@@ -91,5 +91,5 @@ def open_menu():
             optimizer.step()
         if epoch % 5 == 4:
             print(epoch + 1, loss.item())
-            calc_accuracy(model, x_train, y_train)
-            calc_accuracy(model, x_test, y_test)
+    calc_accuracy(model, x_train, y_train)
+    calc_accuracy(model, x_test, y_test)

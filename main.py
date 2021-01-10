@@ -1,12 +1,12 @@
-from KNN import knn
-from feed_forward import feed_forward
-from CNN import cnn
-from ecnn import ensemble_cnn
+from methods import knn, svm, feed_forward, cnn, ensemble_cnn
 
 
 def knn_menu():
     knn.open_menu()
 
+
+def svm_menu():
+    svm.open_menu()
 
 def ff_menu():
     feed_forward.open_menu()
@@ -22,6 +22,7 @@ def ecnn_menu():
 
 menu_switcher = {
     'knn': knn_menu,
+    'svm': svm_menu,
     'ff': ff_menu,
     'cnn': cnn_menu,
     'ecnn': ecnn_menu
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     while menu_option != 'q':
         menuMessage = ('Main Menu:\n'
                        '(knn) K Nearest Neighbor\n'
+                       '(svm) Support Vector Machine\n'
                        '(ff) Feed Forward Neural Network\n'
                        '(cnn) Convolutional Neural Network\n'
                        '(ecnn) Ensemble Convolutional Neural Network\n'
@@ -43,14 +45,3 @@ if __name__ == '__main__':
 
         menu_func = menu_switcher.get(menu_option, "nothing")
         menu_func()
-
-            # case 'knn':
-            #
-            # if menu_option == 'v':
-            #     view_menu(x_test, y_test)
-            # elif menu_option == 't':
-            #     classify_test_menu(kd_tree, y_train, x_test)
-            # #elif menu_option == 'c':
-            # #    print("")
-            # elif menu_option == 'a':
-            #     calc_accuracy(kd_tree, y_train, x_test, y_test)
