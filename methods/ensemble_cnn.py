@@ -10,6 +10,51 @@ from mnist import MNIST
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
+class CombinerNN(torch.nn.Module):
+    def __init__(self):
+        super(CombinerNN, self).__init__()
+        self.linear1 = torch.nn.Linear(30, 10)
+
+    def forward(self, x):
+        x = self.linear1(x)
+        return x
+
+
+def train_combiner(model_1, model_2, model_3, train_loader, test_loader):
+    combiner_model = CombinerNN().to(device)
+    combiner_model.train()
+
+    loss_fn = torch.nn.CrossEntropyLoss(reduction='mean')
+    optimizer = torch.optim.Adam(combiner_model.parameters(), lr=1e-4)
+
+    for epoch in range(50):
+        for i, (images, labels) in enumerate(train_loader):
+            x = images.to(device)
+            y = labels.to(device)
+
+            pred_model_1 = model_1(x)
+            pred_model_2 = model_2(x)
+            pred_model_3 = model_3(x)
+
+            pred_models = torch.cat([pred_model_1, pred_model_2, pred_model_3], dim=1)
+
+            y_pred_combiner = combiner_model(pred_models)
+            loss = loss_fn(y_pred_combiner, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        if epoch % 5 == 4:
+            print(epoch + 1, "Combiner Ensemble: ", loss.item())
+
+        print("Ensemble train:")
+        calc_ensemble_accuracy(model_1, model_2, model_3, combiner_model, train_loader)
+        print("Ensemble test:")
+        calc_ensemble_accuracy(model_1, model_2, model_3, combiner_model, test_loader)
+
+    return combiner_model
+
+
 def calc_accuracy(model, loader):
     model.eval()
     with torch.no_grad():
@@ -27,10 +72,11 @@ def calc_accuracy(model, loader):
     model.train()
 
 
-def calc_ensemble_accuracy(model_a, model_b, model_c, loader):
+def calc_ensemble_accuracy(model_a, model_b, model_c, model_combiner, loader):
     model_a.eval()
     model_b.eval()
     model_c.eval()
+    model_combiner.eval()
 
     with torch.no_grad():
         total = 0
@@ -43,7 +89,9 @@ def calc_ensemble_accuracy(model_a, model_b, model_c, loader):
             y_pred_b = model_b(x_batch)
             y_pred_c = model_c(x_batch)
 
-            y_pred_ensemble = (y_pred_a + y_pred_b + y_pred_c) / 3
+            pred_models = torch.cat([y_pred_a, y_pred_b, y_pred_c], dim=1)
+
+            y_pred_ensemble = model_combiner(pred_models)
 
             total += y_batch.size(0)
             num_correct += (y_pred_ensemble.argmax(dim=1) == y_batch).sum().item()
@@ -52,6 +100,7 @@ def calc_ensemble_accuracy(model_a, model_b, model_c, loader):
     model_a.train()
     model_b.train()
     model_c.train()
+    model_combiner.train()
 
 
 class DigitClassifierCNN(torch.nn.Module):
@@ -71,7 +120,7 @@ class DigitClassifierCNN(torch.nn.Module):
         self.drop2 = torch.nn.Dropout(0.4)
         self.batch2 = torch.nn.BatchNorm2d(64)
         self.fc1 = torch.nn.Linear(7 * 7 * 64, 128)
-        self.fc2 = torch.nn.Linear(128, 100)
+        self.fc2 = torch.nn.Linear(128, 10)
 
     def forward(self, x):
         x = self.conv1_1(x)
@@ -116,58 +165,61 @@ def open_menu():
                                               batch_size=batch_size,
                                               shuffle=False)
 
-    model_cnn = DigitClassifierCNN().to(device)
-    model_simple = DigitClassifierCNN().to(device)
-    model_ff = DigitClassifierCNN().to(device)
+    model_1 = DigitClassifierCNN().to(device)
+    model_2 = DigitClassifierCNN().to(device)
+    model_3 = DigitClassifierCNN().to(device)
 
     loss_fn = torch.nn.CrossEntropyLoss(reduction='mean')
-    optimizer_cnn = torch.optim.Adam(model_cnn.parameters(), lr=1e-4)
-    optimizer_simple = torch.optim.Adam(model_simple.parameters(), lr=1e-4)
-    optimizer_ff = torch.optim.Adam(model_ff.parameters(), lr=1e-4)
+    optimizer_1 = torch.optim.Adam(model_1.parameters(), lr=1e-4)
+    optimizer_2 = torch.optim.Adam(model_2.parameters(), lr=1e-4)
+    optimizer_3 = torch.optim.Adam(model_3.parameters(), lr=1e-4)
 
-    model_cnn.train()
-    model_simple.train()
-    model_ff.train()
+    model_1.train()
+    model_2.train()
+    model_3.train()
 
     torch.cuda.empty_cache()
-    for epoch in range(20):
+    for epoch in range(50):
         for i, (images, labels) in enumerate(train_loader):
             x = images.to(device)
             y = labels.to(device)
 
-            y_pred_cnn = model_cnn(x)
-            loss_cnn = loss_fn(y_pred_cnn, y)
-            optimizer_cnn.zero_grad()
-            loss_cnn.backward()
-            optimizer_cnn.step()
+            y_pred_1 = model_1(x)
+            loss_1 = loss_fn(y_pred_1, y)
+            optimizer_1.zero_grad()
+            loss_1.backward()
+            optimizer_1.step()
 
-            y_pred_simple = model_simple(x)
-            loss_simple = loss_fn(y_pred_simple, y)
-            optimizer_simple.zero_grad()
-            loss_simple.backward()
-            optimizer_simple.step()
+            y_pred_2 = model_2(x)
+            loss_2 = loss_fn(y_pred_2, y)
+            optimizer_2.zero_grad()
+            loss_2.backward()
+            optimizer_2.step()
 
-            y_pred_ff = model_ff(x)
-            loss_ff = loss_fn(y_pred_ff, y)
-            optimizer_ff.zero_grad()
-            loss_ff.backward()
-            optimizer_ff.step()
+            y_pred_3 = model_3(x)
+            loss_3 = loss_fn(y_pred_3, y)
+            optimizer_3.zero_grad()
+            loss_3.backward()
+            optimizer_3.step()
+
         if epoch % 5 == 4:
-            print(epoch + 1, "methods: ", loss_cnn.item(), "Simple: ", loss_simple.item(), "FF: ", loss_ff.item())
+            print(epoch + 1, "Model 1: ", loss_1.item(), "Model 2: ", loss_2.item(), "Model 3: ", loss_3.item())
+
+    combiner_model = train_combiner(model_1, model_2, model_3, train_loader, test_loader)
 
     print("Model 1 train:")
-    calc_accuracy(model_cnn, train_loader)
+    calc_accuracy(model_1, train_loader)
     print("Model 1 test:")
-    calc_accuracy(model_cnn, test_loader)
+    calc_accuracy(model_1, test_loader)
     print("Model 2 train:")
-    calc_accuracy(model_simple, train_loader)
+    calc_accuracy(model_2, train_loader)
     print("Model 2 test:")
-    calc_accuracy(model_simple, test_loader)
+    calc_accuracy(model_2, test_loader)
     print("Model 3 train:")
-    calc_accuracy(model_ff, train_loader)
+    calc_accuracy(model_3, train_loader)
     print("Model 3 test:")
-    calc_accuracy(model_ff, test_loader)
+    calc_accuracy(model_3, test_loader)
     print("Ensemble train:")
-    calc_ensemble_accuracy(model_cnn, model_simple, model_ff, train_loader)
+    calc_ensemble_accuracy(model_1, model_2, model_3, combiner_model, train_loader)
     print("Ensemble test:")
-    calc_ensemble_accuracy(model_cnn, model_simple, model_ff, test_loader)
+    calc_ensemble_accuracy(model_1, model_2, model_3, combiner_model, test_loader)

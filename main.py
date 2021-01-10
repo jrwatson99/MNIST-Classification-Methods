@@ -50,5 +50,6 @@ if __name__ == '__main__':
         print(menuMessage)
         menu_option = input("Select an option: ")
 
-        menu_func = menu_switcher.get(menu_option, "nothing")
-        menu_func()
+        if menu_option in menu_switcher:
+            menu_func = menu_switcher.get(menu_option, "nothing")
+            menu_func()
